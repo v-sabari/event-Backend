@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "College Event Management - Full API (Phase 3 & 4)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "accessToken", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "registrationId", "value": "" },
+    { "key": "venueId", "value": "" },
+    { "key": "qrToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Super Admin seed)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) { pm.collectionVariables.set('accessToken', pm.response.json().data.accessToken); }"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"regNumber\": \"SA001\",\n  \"password\": \"ChangeMe123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Venues",
+      "item": [
+        {
+          "name": "Create Venue",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) { pm.collectionVariables.set('venueId', pm.response.json().data.id); }"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/venues",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Main Auditorium\",\n  \"location\": \"Block A\",\n  \"capacity\": 200\n}" }
+          }
+        },
+        { "name": "List Venues", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/venues" } }
+      ]
+    },
+    {
+      "name": "Events (Creation + Approval Workflow)",
+      "item": [
+        {
+          "name": "Create Draft Event",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) { pm.collectionVariables.set('eventId', pm.response.json().data.id); }"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/events",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Hackathon 2026\",\n  \"description\": \"24-hour coding hackathon\",\n  \"venueId\": {{venueId}},\n  \"startTime\": \"2026-12-01T09:00:00Z\",\n  \"endTime\": \"2026-12-02T09:00:00Z\",\n  \"registrationDeadline\": \"2026-11-25T23:59:00Z\",\n  \"maxParticipants\": 100,\n  \"fee\": 0\n}" }
+          }
+        },
+        { "name": "Update Draft", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}", "body": { "mode": "raw", "raw": "{\n  \"title\": \"Hackathon 2026 - Updated\",\n  \"venueId\": {{venueId}},\n  \"startTime\": \"2026-12-01T09:00:00Z\",\n  \"endTime\": \"2026-12-02T09:00:00Z\",\n  \"registrationDeadline\": \"2026-11-25T23:59:00Z\",\n  \"maxParticipants\": 100,\n  \"fee\": 0\n}" } } },
+        { "name": "Submit for Approval", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/submit" } },
+        { "name": "Approve (Faculty/HOD/Admin)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/approve", "body": { "mode": "raw", "raw": "{\n  \"remarks\": \"Looks good\"\n}" } } },
+        { "name": "Reject (with remarks)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/reject", "body": { "mode": "raw", "raw": "{\n  \"remarks\": \"Venue conflict, please revise\"\n}" } } },
+        { "name": "Approval History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/history" } },
+        { "name": "Pending Approval Queue", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/pending-approval" } },
+        { "name": "My Visible Events", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events" } },
+        { "name": "Published Events (public)", "request": { "method": "GET", "url": "{{baseUrl}}/api/events/published" } },
+        { "name": "Search Events (public)", "request": { "method": "GET", "url": "{{baseUrl}}/api/events/search?name=Hackathon" } },
+        { "name": "Cancel Event", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/cancel" } },
+        { "name": "Mark Completed", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/complete" } }
+      ]
+    },
+    {
+      "name": "Registrations + QR + Attendance",
+      "item": [
+        {
+          "name": "Register for Event (Student)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) { const d = pm.response.json().data; pm.collectionVariables.set('registrationId', d.id); pm.collectionVariables.set('qrToken', d.qrToken); }"
+          ]}}],
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/registrations" }
+        },
+        { "name": "My Registrations", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/registrations/mine" } },
+        { "name": "Event Roster", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/registrations" } },
+        { "name": "Download QR Entry Pass", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/registrations/{{registrationId}}/qr" } },
+        { "name": "QR Attendance Scan", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/attendance/scan", "body": { "mode": "raw", "raw": "{\n  \"qrToken\": \"{{qrToken}}\"\n}" } } },
+        { "name": "Cancel Registration", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/registrations/{{registrationId}}" } }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        { "name": "Generate Certificate", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/registrations/{{registrationId}}/certificate" } },
+        { "name": "Get Certificate", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/registrations/{{registrationId}}/certificate" } }
+      ]
+    },
+    {
+      "name": "Feedback",
+      "item": [
+        { "name": "Submit Feedback", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/feedback", "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comments\": \"Great event!\"\n}" } } },
+        { "name": "List Feedback", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/feedback" } },
+        { "name": "Feedback Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/feedback/summary" } }
+      ]
+    },
+    {
+      "name": "Winners",
+      "item": [
+        { "name": "Add Winner", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/winners", "body": { "mode": "raw", "raw": "{\n  \"participantName\": \"Jane Doe\",\n  \"position\": \"1st Place\",\n  \"prize\": \"₹5000\"\n}" } } },
+        { "name": "List Winners", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/winners" } }
+      ]
+    },
+    {
+      "name": "Gallery",
+      "item": [
+        { "name": "Upload Gallery Image", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/gallery", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }, { "key": "caption", "value": "Event highlights", "type": "text" }] } } },
+        { "name": "List Gallery Images", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/events/{{eventId}}/gallery" } }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "List Notifications", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/notifications" } },
+        { "name": "Unread Count", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/notifications/unread-count" } },
+        { "name": "Mark All Read", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/notifications/read-all" } }
+      ]
+    },
+    {
+      "name": "Dashboards",
+      "item": [
+        { "name": "Admin Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/dashboard/admin" } },
+        { "name": "Organizer Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/dashboard/organizer" } },
+        { "name": "Student Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/dashboard/student" } }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        { "name": "Department-wise Events", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/department-wise-events" } },
+        { "name": "Category-wise Events", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/category-wise-events" } },
+        { "name": "Attendance Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/attendance" } },
+        { "name": "Registration Report", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/registrations" } },
+        { "name": "Feedback Analysis", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/feedback-analysis" } },
+        { "name": "Most Active Department", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/most-active-department" } },
+        { "name": "Most Active Student", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/reports/most-active-student" } }
+      ]
+    }
+  ]
+}

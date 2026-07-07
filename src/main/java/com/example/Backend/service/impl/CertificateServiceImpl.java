@@ -1,10 +1,12 @@
 package com.example.Backend.service.impl;
 
+import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.exception.ApiException;
 import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.model.Certificate;
 import com.example.Backend.model.Registration;
 import com.example.Backend.model.RegistrationStatus;
+import com.example.Backend.model.Role;
 import com.example.Backend.model.User;
 import com.example.Backend.repository.CertificateRepository;
 import com.example.Backend.service.AuditLogService;
@@ -48,10 +50,10 @@ public class CertificateServiceImpl implements CertificateService {
     private final AuditLogService auditLogService;
 
     public CertificateServiceImpl(CertificateRepository certificateRepository,
-                                   RegistrationService registrationService,
-                                   FileStorageService fileStorageService,
-                                   NotificationService notificationService,
-                                   AuditLogService auditLogService) {
+                                  RegistrationService registrationService,
+                                  FileStorageService fileStorageService,
+                                  NotificationService notificationService,
+                                  AuditLogService auditLogService) {
         this.certificateRepository = certificateRepository;
         this.registrationService = registrationService;
         this.fileStorageService = fileStorageService;
@@ -67,6 +69,16 @@ public class CertificateServiceImpl implements CertificateService {
         });
 
         Registration registration = registrationService.findById(registrationId);
+
+        // BOLA fix: currentUser was accepted but never checked, letting any
+        // Student Organizer generate a certificate for any event. A Student
+        // Organizer must have created the event; Faculty Coordinator/HOD/Super
+        // Admin act as oversight roles and may act on any event.
+        if (currentUser.getRole() == Role.STUDENT_ORGANIZER
+                && !registration.getEvent().getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedCustomException("You can only generate certificates for events you created");
+        }
+
         if (registration.getStatus() != RegistrationStatus.ATTENDED) {
             throw new ApiException("Certificates can only be generated for students marked as attended", HttpStatus.CONFLICT);
         }

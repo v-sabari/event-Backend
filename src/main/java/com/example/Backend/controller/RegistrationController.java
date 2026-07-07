@@ -58,22 +58,27 @@ public class RegistrationController {
 
     @GetMapping("/api/events/{eventId}/registrations")
     @PreAuthorize("hasAnyRole('STUDENT_ORGANIZER', 'FACULTY_COORDINATOR', 'HOD', 'SUPER_ADMIN')")
-    public ApiResponse<List<RegistrationResponseDTO>> roster(@PathVariable Long eventId) {
-        List<RegistrationResponseDTO> response = registrationService.findByEvent(eventId).stream()
+    public ApiResponse<List<RegistrationResponseDTO>> roster(@PathVariable Long eventId,
+                                                             @AuthenticationPrincipal User currentUser) {
+        List<RegistrationResponseDTO> response = registrationService.findByEvent(eventId, currentUser).stream()
                 .map(RegistrationResponseDTO::from).toList();
         return ApiResponse.success(response);
     }
 
-    // QR Entry Pass - the registration's owner (or staff) can fetch the PNG.
+    // QR Entry Pass - the registration's owner (or staff with a relationship to the
+    // event) can fetch the PNG. A Student Organizer must have created the event the
+    // registration belongs to; Faculty Coordinator/HOD/Super Admin may view any.
     @GetMapping(value = "/api/registrations/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] qrImage(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
         Registration registration = registrationService.findById(id);
 
         boolean isOwner = registration.getUser().getId().equals(currentUser.getId());
-        boolean isStaff = currentUser.getRole() == Role.SUPER_ADMIN
+        boolean isPrivilegedStaff = currentUser.getRole() == Role.SUPER_ADMIN
                 || currentUser.getRole() == Role.FACULTY_COORDINATOR
-                || currentUser.getRole() == Role.STUDENT_ORGANIZER;
-        if (!isOwner && !isStaff) {
+                || currentUser.getRole() == Role.HOD;
+        boolean isOrganizingStaff = currentUser.getRole() == Role.STUDENT_ORGANIZER
+                && registration.getEvent().getCreatedBy().getId().equals(currentUser.getId());
+        if (!isOwner && !isPrivilegedStaff && !isOrganizingStaff) {
             throw new AccessDeniedCustomException("You cannot view another student's entry pass");
         }
 

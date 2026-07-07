@@ -47,6 +47,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    // ---- Manual argument validation (e.g. "End time must be after start time",
+    // "Remarks are required when rejecting an event", "Unsupported file type",
+    // "Invalid role") thrown as plain IllegalArgumentException from service-layer
+    // code rather than the ApiException family. Without this handler these fell
+    // through to the generic Exception.class handler below and were reported as
+    // an opaque 500, indistinguishable from a genuine server crash. These are
+    // ordinary client input errors, so they log at WARN (not ERROR) and return
+    // the developer's actual message instead of a generic one.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Invalid argument on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        ErrorResponse body = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.badRequest().body(body);
+    }
+
     // ---- Spring Security ----
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {

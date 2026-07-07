@@ -29,21 +29,28 @@ public class CertificateController {
     @PostMapping
     @PreAuthorize("hasAnyRole('STUDENT_ORGANIZER', 'FACULTY_COORDINATOR', 'HOD', 'SUPER_ADMIN')")
     public ApiResponse<CertificateResponseDTO> generate(@PathVariable Long registrationId,
-                                                         @AuthenticationPrincipal User currentUser) {
+                                                        @AuthenticationPrincipal User currentUser) {
+        // Ownership (Student Organizer must have created the event) is enforced in
+        // CertificateServiceImpl.generateForRegistration.
         Certificate certificate = certificateService.generateForRegistration(registrationId, currentUser);
         return ApiResponse.success("Certificate generated", CertificateResponseDTO.from(certificate));
     }
 
+    // The registration's owner, or staff with a relationship to the event, can view
+    // the certificate. A Student Organizer must have created the event; Faculty
+    // Coordinator/HOD/Super Admin may view any.
     @GetMapping
     public ApiResponse<CertificateResponseDTO> get(@PathVariable Long registrationId,
-                                                    @AuthenticationPrincipal User currentUser) {
+                                                   @AuthenticationPrincipal User currentUser) {
         Certificate certificate = certificateService.findByRegistration(registrationId);
 
         boolean isOwner = certificate.getRegistration().getUser().getId().equals(currentUser.getId());
-        boolean isStaff = currentUser.getRole() == Role.SUPER_ADMIN
+        boolean isPrivilegedStaff = currentUser.getRole() == Role.SUPER_ADMIN
                 || currentUser.getRole() == Role.FACULTY_COORDINATOR
-                || currentUser.getRole() == Role.STUDENT_ORGANIZER;
-        if (!isOwner && !isStaff) {
+                || currentUser.getRole() == Role.HOD;
+        boolean isOrganizingStaff = currentUser.getRole() == Role.STUDENT_ORGANIZER
+                && certificate.getRegistration().getEvent().getCreatedBy().getId().equals(currentUser.getId());
+        if (!isOwner && !isPrivilegedStaff && !isOrganizingStaff) {
             throw new AccessDeniedCustomException("You cannot view another student's certificate");
         }
 

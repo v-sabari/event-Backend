@@ -17,8 +17,10 @@ public interface RegistrationService {
 
     List<Registration> findMine(User student);
 
-    /** Roster for an event - organizer/faculty/admin only (enforced at controller level). */
-    List<Registration> findByEvent(Long eventId);
+    /** Roster for an event - organizer/faculty/admin role-gated at the controller,
+     *  and object-level scoped here: a Student Organizer may only view the roster
+     *  of an event they created; Faculty Coordinator/HOD/Super Admin may view any. */
+    List<Registration> findByEvent(Long eventId, User currentUser);
 
     /** QR Attendance: looks up the registration by its QR token and marks attendance, once. */
     Registration checkInByQrToken(String qrToken, User scannedBy);

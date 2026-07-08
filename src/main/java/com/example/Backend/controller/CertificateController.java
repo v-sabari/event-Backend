@@ -4,9 +4,9 @@ import com.example.Backend.dto.certificate.CertificateResponseDTO;
 import com.example.Backend.dto.common.ApiResponse;
 import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.model.Certificate;
-import com.example.Backend.model.Role;
 import com.example.Backend.model.User;
 import com.example.Backend.service.CertificateService;
+import com.example.Backend.service.EventAuthorizationService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.*;
 public class CertificateController {
 
     private final CertificateService certificateService;
+    private final EventAuthorizationService eventAuthorizationService;
 
-    public CertificateController(CertificateService certificateService) {
+    public CertificateController(CertificateService certificateService,
+                                 EventAuthorizationService eventAuthorizationService) {
         this.certificateService = certificateService;
+        this.eventAuthorizationService = eventAuthorizationService;
     }
 
     @PostMapping
@@ -31,26 +34,21 @@ public class CertificateController {
     public ApiResponse<CertificateResponseDTO> generate(@PathVariable Long registrationId,
                                                         @AuthenticationPrincipal User currentUser) {
         // Ownership (Student Organizer must have created the event) is enforced in
-        // CertificateServiceImpl.generateForRegistration.
+        // CertificateServiceImpl.generateForRegistration via EventAuthorizationService.
         Certificate certificate = certificateService.generateForRegistration(registrationId, currentUser);
         return ApiResponse.success("Certificate generated", CertificateResponseDTO.from(certificate));
     }
 
-    // The registration's owner, or staff with a relationship to the event, can view
-    // the certificate. A Student Organizer must have created the event; Faculty
-    // Coordinator/HOD/Super Admin may view any.
+    // The registration's owner, or event-scoped staff (per EventAuthorizationService),
+    // can view the certificate.
     @GetMapping
     public ApiResponse<CertificateResponseDTO> get(@PathVariable Long registrationId,
                                                    @AuthenticationPrincipal User currentUser) {
         Certificate certificate = certificateService.findByRegistration(registrationId);
 
         boolean isOwner = certificate.getRegistration().getUser().getId().equals(currentUser.getId());
-        boolean isPrivilegedStaff = currentUser.getRole() == Role.SUPER_ADMIN
-                || currentUser.getRole() == Role.FACULTY_COORDINATOR
-                || currentUser.getRole() == Role.HOD;
-        boolean isOrganizingStaff = currentUser.getRole() == Role.STUDENT_ORGANIZER
-                && certificate.getRegistration().getEvent().getCreatedBy().getId().equals(currentUser.getId());
-        if (!isOwner && !isPrivilegedStaff && !isOrganizingStaff) {
+        boolean isEventStaff = eventAuthorizationService.canActOnEvent(certificate.getRegistration().getEvent(), currentUser);
+        if (!isOwner && !isEventStaff) {
             throw new AccessDeniedCustomException("You cannot view another student's certificate");
         }
 

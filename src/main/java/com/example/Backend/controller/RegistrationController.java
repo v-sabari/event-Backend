@@ -4,8 +4,8 @@ import com.example.Backend.dto.common.ApiResponse;
 import com.example.Backend.dto.registration.RegistrationResponseDTO;
 import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.model.Registration;
-import com.example.Backend.model.Role;
 import com.example.Backend.model.User;
+import com.example.Backend.service.EventAuthorizationService;
 import com.example.Backend.service.QrService;
 import com.example.Backend.service.RegistrationService;
 import org.springframework.http.MediaType;
@@ -25,10 +25,14 @@ import java.util.List;
 public class RegistrationController {
 
     private final RegistrationService registrationService;
+    private final EventAuthorizationService eventAuthorizationService;
     private final QrService qrService;
 
-    public RegistrationController(RegistrationService registrationService, QrService qrService) {
+    public RegistrationController(RegistrationService registrationService,
+                                  EventAuthorizationService eventAuthorizationService,
+                                  QrService qrService) {
         this.registrationService = registrationService;
+        this.eventAuthorizationService = eventAuthorizationService;
         this.qrService = qrService;
     }
 
@@ -65,20 +69,15 @@ public class RegistrationController {
         return ApiResponse.success(response);
     }
 
-    // QR Entry Pass - the registration's owner (or staff with a relationship to the
-    // event) can fetch the PNG. A Student Organizer must have created the event the
-    // registration belongs to; Faculty Coordinator/HOD/Super Admin may view any.
+    // QR Entry Pass - the registration's owner, or event-scoped staff (per
+    // EventAuthorizationService), can fetch the PNG.
     @GetMapping(value = "/api/registrations/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] qrImage(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
         Registration registration = registrationService.findById(id);
 
         boolean isOwner = registration.getUser().getId().equals(currentUser.getId());
-        boolean isPrivilegedStaff = currentUser.getRole() == Role.SUPER_ADMIN
-                || currentUser.getRole() == Role.FACULTY_COORDINATOR
-                || currentUser.getRole() == Role.HOD;
-        boolean isOrganizingStaff = currentUser.getRole() == Role.STUDENT_ORGANIZER
-                && registration.getEvent().getCreatedBy().getId().equals(currentUser.getId());
-        if (!isOwner && !isPrivilegedStaff && !isOrganizingStaff) {
+        boolean isEventStaff = eventAuthorizationService.canActOnEvent(registration.getEvent(), currentUser);
+        if (!isOwner && !isEventStaff) {
             throw new AccessDeniedCustomException("You cannot view another student's entry pass");
         }
 

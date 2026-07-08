@@ -41,7 +41,7 @@ public class SecurityConfig {
     private String allowedOrigins;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
-                           JwtAuthenticationFilter jwtAuthenticationFilter) {
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
@@ -76,7 +76,9 @@ public class SecurityConfig {
                                 "/api/files/download/**",
                                 "/api/events/published",
                                 "/api/events/search",
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/health",
+                                "/api/health"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/departments/**", "/api/event-categories/**", "/api/venues/**"

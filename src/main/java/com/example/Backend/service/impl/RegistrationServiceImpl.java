@@ -6,6 +6,7 @@ import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.model.*;
 import com.example.Backend.repository.RegistrationRepository;
 import com.example.Backend.service.AuditLogService;
+import com.example.Backend.service.EventAuthorizationService;
 import com.example.Backend.service.EventService;
 import com.example.Backend.service.NotificationService;
 import com.example.Backend.service.RegistrationService;
@@ -26,15 +27,18 @@ public class RegistrationServiceImpl implements RegistrationService {
 
     private final RegistrationRepository registrationRepository;
     private final EventService eventService;
+    private final EventAuthorizationService eventAuthorizationService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
     public RegistrationServiceImpl(RegistrationRepository registrationRepository,
                                    EventService eventService,
+                                   EventAuthorizationService eventAuthorizationService,
                                    NotificationService notificationService,
                                    AuditLogService auditLogService) {
         this.registrationRepository = registrationRepository;
         this.eventService = eventService;
+        this.eventAuthorizationService = eventAuthorizationService;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
     }
@@ -110,22 +114,6 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
     }
 
-    /**
-     * Object-level authorization for staff acting on a specific event's registrations
-     * (roster viewing, QR check-in). A Student Organizer must have created the event
-     * themselves; Faculty Coordinator, HOD, and Super Admin act as oversight roles and
-     * may act on any event, consistent with EventApprovalServiceImpl's approval override
-     * and GalleryServiceImpl.removeImage's ownership-or-privileged-role check.
-     */
-    private void assertStaffAllowedForEvent(Event event, User currentUser, String message) {
-        if (currentUser.getRole() == Role.STUDENT_ORGANIZER) {
-            boolean isEventOwner = event.getCreatedBy().getId().equals(currentUser.getId());
-            if (!isEventOwner) {
-                throw new AccessDeniedCustomException(message);
-            }
-        }
-    }
-
     private void promoteNextWaitlisted(Event event) {
         List<Registration> waitlist = registrationRepository
                 .findByEventIdAndStatusOrderByRegisteredAtAsc(event.getId(), RegistrationStatus.WAITLISTED);
@@ -159,7 +147,8 @@ public class RegistrationServiceImpl implements RegistrationService {
     @Override
     public List<Registration> findByEvent(Long eventId, User currentUser) {
         Event event = eventService.findById(eventId);
-        assertStaffAllowedForEvent(event, currentUser, "You can only view the roster for events you created");
+        eventAuthorizationService.assertCanActOnEvent(event, currentUser,
+                "You can only view the roster for events you created");
         return registrationRepository.findByEventId(eventId);
     }
 
@@ -169,7 +158,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         Registration registration = registrationRepository.findByQrToken(qrToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid or unrecognized QR code"));
 
-        assertStaffAllowedForEvent(registration.getEvent(), scannedBy,
+        eventAuthorizationService.assertCanActOnEvent(registration.getEvent(), scannedBy,
                 "You can only mark attendance for events you created");
 
         if (registration.getStatus() == RegistrationStatus.CANCELLED) {

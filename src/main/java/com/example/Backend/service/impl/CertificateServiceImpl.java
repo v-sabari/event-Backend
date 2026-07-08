@@ -1,16 +1,15 @@
 package com.example.Backend.service.impl;
 
-import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.exception.ApiException;
 import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.model.Certificate;
 import com.example.Backend.model.Registration;
 import com.example.Backend.model.RegistrationStatus;
-import com.example.Backend.model.Role;
 import com.example.Backend.model.User;
 import com.example.Backend.repository.CertificateRepository;
 import com.example.Backend.service.AuditLogService;
 import com.example.Backend.service.CertificateService;
+import com.example.Backend.service.EventAuthorizationService;
 import com.example.Backend.service.FileStorageService;
 import com.example.Backend.service.NotificationService;
 import com.example.Backend.service.RegistrationService;
@@ -45,17 +44,20 @@ public class CertificateServiceImpl implements CertificateService {
 
     private final CertificateRepository certificateRepository;
     private final RegistrationService registrationService;
+    private final EventAuthorizationService eventAuthorizationService;
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
     public CertificateServiceImpl(CertificateRepository certificateRepository,
                                   RegistrationService registrationService,
+                                  EventAuthorizationService eventAuthorizationService,
                                   FileStorageService fileStorageService,
                                   NotificationService notificationService,
                                   AuditLogService auditLogService) {
         this.certificateRepository = certificateRepository;
         this.registrationService = registrationService;
+        this.eventAuthorizationService = eventAuthorizationService;
         this.fileStorageService = fileStorageService;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
@@ -70,14 +72,8 @@ public class CertificateServiceImpl implements CertificateService {
 
         Registration registration = registrationService.findById(registrationId);
 
-        // BOLA fix: currentUser was accepted but never checked, letting any
-        // Student Organizer generate a certificate for any event. A Student
-        // Organizer must have created the event; Faculty Coordinator/HOD/Super
-        // Admin act as oversight roles and may act on any event.
-        if (currentUser.getRole() == Role.STUDENT_ORGANIZER
-                && !registration.getEvent().getCreatedBy().getId().equals(currentUser.getId())) {
-            throw new AccessDeniedCustomException("You can only generate certificates for events you created");
-        }
+        eventAuthorizationService.assertCanActOnEvent(registration.getEvent(), currentUser,
+                "You can only generate certificates for events you created");
 
         if (registration.getStatus() != RegistrationStatus.ATTENDED) {
             throw new ApiException("Certificates can only be generated for students marked as attended", HttpStatus.CONFLICT);

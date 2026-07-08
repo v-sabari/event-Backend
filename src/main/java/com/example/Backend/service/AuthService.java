@@ -5,7 +5,7 @@ import com.example.Backend.dto.auth.AuthResponseDTO;
 
 public interface AuthService {
 
-    AuthResponseDTO login(LoginDTO dto);
+    AuthResponseDTO login(LoginDTO dto, String clientIp);
 
     AuthResponseDTO refresh(String refreshToken);
 

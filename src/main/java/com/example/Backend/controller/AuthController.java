@@ -5,6 +5,7 @@ import com.example.Backend.dto.auth.*;
 import com.example.Backend.dto.common.ApiResponse;
 import com.example.Backend.service.AuthService;
 import com.example.Backend.service.PasswordResetService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +32,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<AuthResponseDTO> login(@Valid @RequestBody LoginDTO dto) {
-        AuthResponseDTO response = authService.login(dto);
+    public ApiResponse<AuthResponseDTO> login(@Valid @RequestBody LoginDTO dto, HttpServletRequest request) {
+        // BE-05: request.getRemoteAddr(), not X-Forwarded-For - see the
+        // javadoc on LoginAttemptServiceImpl for why a client-supplied
+        // header isn't trusted here.
+        AuthResponseDTO response = authService.login(dto, request.getRemoteAddr());
         return ApiResponse.success("Login successful", response);
     }
 

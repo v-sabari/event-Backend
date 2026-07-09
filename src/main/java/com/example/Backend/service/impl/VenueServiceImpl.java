@@ -12,7 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class VenueServiceImpl implements VenueService {
@@ -81,8 +82,8 @@ public class VenueServiceImpl implements VenueService {
     }
 
     @Override
-    public List<Venue> findAll() {
-        return venueRepository.findAll();
+    public Page<Venue> findAll(Pageable pageable) {
+        return venueRepository.findAll(pageable);
     }
 
     @Override

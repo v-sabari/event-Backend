@@ -6,10 +6,10 @@ import com.example.Backend.dto.venue.VenueResponseDTO;
 import com.example.Backend.model.Venue;
 import com.example.Backend.service.VenueService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Venue master data. Writes restricted to SUPER_ADMIN/FACULTY_COORDINATOR
@@ -61,8 +61,11 @@ public class VenueController {
     }
 
     @GetMapping
-    public ApiResponse<List<VenueResponseDTO>> list() {
-        List<VenueResponseDTO> response = venueService.findAll().stream().map(VenueResponseDTO::from).toList();
+    public ApiResponse<Page<VenueResponseDTO>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<VenueResponseDTO> response = venueService.findAll(PageRequest.of(page, size)).map(VenueResponseDTO::from);
         return ApiResponse.success(response);
     }
 }

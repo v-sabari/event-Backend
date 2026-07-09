@@ -2,6 +2,8 @@ package com.example.Backend.repository;
 
 import com.example.Backend.model.Event;
 import com.example.Backend.model.EventStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +19,18 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findByCreatedById(Long userId);
 
-    List<Event> findByDepartmentId(Long departmentId);
+    // BE-17: Pageable overload used by myVisibleEvents() for the
+    // STUDENT_ORGANIZER branch. The existing unpaged findByCreatedById
+    // above is kept as-is - DashboardServiceImpl.organizerSummary(...)
+    // still needs the full list and is out of this bug's scope.
+    Page<Event> findByCreatedById(Long userId, Pageable pageable);
+
+    // BE-17: Pageable overload used by myVisibleEvents() for the
+    // FACULTY_COORDINATOR/HOD branch. Unlike findByCreatedById/findByStatusIn
+    // above, there is no unpaged findByDepartmentId(Long) kept alongside this -
+    // its only caller was EventServiceImpl.findVisibleTo(...), which now uses
+    // this paged version, so keeping an unpaged twin would just be dead code.
+    Page<Event> findByDepartmentId(Long departmentId, Pageable pageable);
 
     /**
      * Venue Double Booking Prevention: any event at the same venue, not in a
@@ -33,12 +46,17 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               AND e.endTime > :startTime
             """)
     List<Event> findOverlappingBookings(@Param("venueId") Long venueId,
-                                         @Param("startTime") Instant startTime,
-                                         @Param("endTime") Instant endTime,
-                                         @Param("excludeEventId") Long excludeEventId);
+                                        @Param("startTime") Instant startTime,
+                                        @Param("endTime") Instant endTime,
+                                        @Param("excludeEventId") Long excludeEventId);
 
     /** Events visible to the public calendar / listing: published (and not yet completed/cancelled). */
     List<Event> findByStatusIn(List<EventStatus> statuses);
+
+    // BE-17: Pageable overload used by myVisibleEvents() for the STUDENT
+    // branch. Unpaged version kept - /api/events/published and
+    // DashboardServiceImpl both still call the unpaged findByStatusIn.
+    Page<Event> findByStatusIn(List<EventStatus> statuses, Pageable pageable);
 
     /**
      * Search & Filters module: any combination of name/department/category/venue/date
@@ -55,10 +73,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
               AND (CAST(:date AS date) IS NULL OR CAST(e.startTime AS date) = :date)
             """)
     List<Event> search(@Param("name") String name,
-                        @Param("departmentId") Long departmentId,
-                        @Param("categoryId") Long categoryId,
-                        @Param("venueId") Long venueId,
-                        @Param("date") java.time.LocalDate date);
+                       @Param("departmentId") Long departmentId,
+                       @Param("categoryId") Long categoryId,
+                       @Param("venueId") Long venueId,
+                       @Param("date") java.time.LocalDate date);
 
     long countByStatus(EventStatus status);
 

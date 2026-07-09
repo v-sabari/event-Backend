@@ -17,7 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class ClubServiceImpl implements ClubService {
@@ -30,9 +31,9 @@ public class ClubServiceImpl implements ClubService {
     private final AuditLogService auditLogService;
 
     public ClubServiceImpl(ClubRepository clubRepository,
-                            DepartmentRepository departmentRepository,
-                            UserRepository userRepository,
-                            AuditLogService auditLogService) {
+                           DepartmentRepository departmentRepository,
+                           UserRepository userRepository,
+                           AuditLogService auditLogService) {
         this.clubRepository = clubRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
@@ -90,8 +91,8 @@ public class ClubServiceImpl implements ClubService {
     }
 
     @Override
-    public List<Club> findAll() {
-        return clubRepository.findAll();
+    public Page<Club> findAll(Pageable pageable) {
+        return clubRepository.findAll(pageable);
     }
 
     @Override

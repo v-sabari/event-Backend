@@ -2,8 +2,8 @@ package com.example.Backend.service;
 
 import com.example.Backend.dto.department.DepartmentRequestDTO;
 import com.example.Backend.model.Department;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface DepartmentService {
 
@@ -15,5 +15,6 @@ public interface DepartmentService {
 
     Department findById(Long id);
 
-    List<Department> findAll();
+    // BE-17: see VenueService.findAll() for rationale.
+    Page<Department> findAll(Pageable pageable);
 }

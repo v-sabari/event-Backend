@@ -2,8 +2,8 @@ package com.example.Backend.service;
 
 import com.example.Backend.dto.category.EventCategoryRequestDTO;
 import com.example.Backend.model.EventCategory;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface EventCategoryService {
 
@@ -15,5 +15,6 @@ public interface EventCategoryService {
 
     EventCategory findById(Long id);
 
-    List<EventCategory> findAll();
+    // BE-17: see VenueService.findAll() for rationale.
+    Page<EventCategory> findAll(Pageable pageable);
 }

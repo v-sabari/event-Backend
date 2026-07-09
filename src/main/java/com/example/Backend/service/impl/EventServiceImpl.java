@@ -10,6 +10,8 @@ import com.example.Backend.service.AuditLogService;
 import com.example.Backend.service.EventService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,11 +36,11 @@ public class EventServiceImpl implements EventService {
     private final AuditLogService auditLogService;
 
     public EventServiceImpl(EventRepository eventRepository,
-                             VenueRepository venueRepository,
-                             EventCategoryRepository categoryRepository,
-                             ClubRepository clubRepository,
-                             DepartmentRepository departmentRepository,
-                             AuditLogService auditLogService) {
+                            VenueRepository venueRepository,
+                            EventCategoryRepository categoryRepository,
+                            ClubRepository clubRepository,
+                            DepartmentRepository departmentRepository,
+                            AuditLogService auditLogService) {
         this.eventRepository = eventRepository;
         this.venueRepository = venueRepository;
         this.categoryRepository = categoryRepository;
@@ -96,14 +98,14 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<Event> findVisibleTo(User currentUser) {
+    public Page<Event> findVisibleTo(User currentUser, Pageable pageable) {
         return switch (currentUser.getRole()) {
-            case SUPER_ADMIN -> eventRepository.findAll();
+            case SUPER_ADMIN -> eventRepository.findAll(pageable);
             case FACULTY_COORDINATOR, HOD -> currentUser.getDepartment() != null
-                    ? eventRepository.findByDepartmentId(currentUser.getDepartment().getId())
-                    : List.of();
-            case STUDENT_ORGANIZER -> eventRepository.findByCreatedById(currentUser.getId());
-            case STUDENT -> findPublished();
+                    ? eventRepository.findByDepartmentId(currentUser.getDepartment().getId(), pageable)
+                    : Page.empty(pageable);
+            case STUDENT_ORGANIZER -> eventRepository.findByCreatedById(currentUser.getId(), pageable);
+            case STUDENT -> eventRepository.findByStatusIn(List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED), pageable);
         };
     }
 

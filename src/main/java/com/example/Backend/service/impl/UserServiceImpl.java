@@ -12,11 +12,11 @@ import com.example.Backend.service.AuditLogService;
 import com.example.Backend.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -29,9 +29,9 @@ public class UserServiceImpl implements UserService {
     private final AuditLogService auditLogService;
 
     public UserServiceImpl(UserRepository userRepository,
-                            DepartmentRepository departmentRepository,
-                            PasswordEncoder passwordEncoder,
-                            AuditLogService auditLogService) {
+                           DepartmentRepository departmentRepository,
+                           PasswordEncoder passwordEncoder,
+                           AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.passwordEncoder = passwordEncoder;
@@ -95,13 +95,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public Page<User> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
 
     @Override
-    public List<User> findByRole(Role role) {
-        return userRepository.findByRole(role);
+    public Page<User> findByRole(Role role, Pageable pageable) {
+        return userRepository.findByRole(role, pageable);
     }
 
     @Override

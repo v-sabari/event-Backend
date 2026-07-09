@@ -2,8 +2,8 @@ package com.example.Backend.service;
 
 import com.example.Backend.dto.club.ClubRequestDTO;
 import com.example.Backend.model.Club;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface ClubService {
 
@@ -15,7 +15,8 @@ public interface ClubService {
 
     Club findById(Long id);
 
-    List<Club> findAll();
+    // BE-17: see VenueService.findAll() for rationale.
+    Page<Club> findAll(Pageable pageable);
 
     Club setActive(Long id, boolean active);
 }

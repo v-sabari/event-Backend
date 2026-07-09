@@ -13,6 +13,8 @@ import com.example.Backend.model.User;
 import com.example.Backend.service.EventApprovalService;
 import com.example.Backend.service.EventService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +43,7 @@ public class EventController {
     @PostMapping
     @PreAuthorize("hasAnyRole('STUDENT_ORGANIZER', 'SUPER_ADMIN')")
     public ApiResponse<EventResponseDTO> createDraft(@Valid @RequestBody EventRequestDTO dto,
-                                                      @AuthenticationPrincipal User currentUser) {
+                                                     @AuthenticationPrincipal User currentUser) {
         Event created = eventService.createDraft(dto, currentUser);
         return ApiResponse.success("Event draft created", EventResponseDTO.from(created));
     }
@@ -49,8 +51,8 @@ public class EventController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('STUDENT_ORGANIZER', 'SUPER_ADMIN')")
     public ApiResponse<EventResponseDTO> updateDraft(@PathVariable Long id,
-                                                      @Valid @RequestBody EventRequestDTO dto,
-                                                      @AuthenticationPrincipal User currentUser) {
+                                                     @Valid @RequestBody EventRequestDTO dto,
+                                                     @AuthenticationPrincipal User currentUser) {
         Event updated = eventService.updateDraft(id, dto, currentUser);
         return ApiResponse.success("Event draft updated", EventResponseDTO.from(updated));
     }
@@ -63,9 +65,14 @@ public class EventController {
     }
 
     @GetMapping
-    public ApiResponse<List<EventResponseDTO>> myVisibleEvents(@AuthenticationPrincipal User currentUser) {
-        List<EventResponseDTO> response = eventService.findVisibleTo(currentUser).stream()
-                .map(EventResponseDTO::from).toList();
+    public ApiResponse<Page<EventResponseDTO>> myVisibleEvents(
+            @AuthenticationPrincipal User currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<EventResponseDTO> response = eventService
+                .findVisibleTo(currentUser, PageRequest.of(page, size))
+                .map(EventResponseDTO::from);
         return ApiResponse.success(response);
     }
 
@@ -103,8 +110,8 @@ public class EventController {
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('FACULTY_COORDINATOR', 'HOD', 'SUPER_ADMIN')")
     public ApiResponse<EventResponseDTO> approve(@PathVariable Long id,
-                                                  @Valid @RequestBody(required = false) ApprovalActionDTO dto,
-                                                  @AuthenticationPrincipal User currentUser) {
+                                                 @Valid @RequestBody(required = false) ApprovalActionDTO dto,
+                                                 @AuthenticationPrincipal User currentUser) {
         String remarks = dto != null ? dto.getRemarks() : null;
         Event event = approvalService.approve(id, currentUser, remarks);
         return ApiResponse.success("Event approved", EventResponseDTO.from(event));
@@ -113,8 +120,8 @@ public class EventController {
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('FACULTY_COORDINATOR', 'HOD', 'SUPER_ADMIN')")
     public ApiResponse<EventResponseDTO> reject(@PathVariable Long id,
-                                                 @Valid @RequestBody ApprovalActionDTO dto,
-                                                 @AuthenticationPrincipal User currentUser) {
+                                                @Valid @RequestBody ApprovalActionDTO dto,
+                                                @AuthenticationPrincipal User currentUser) {
         Event event = approvalService.reject(id, currentUser, dto.getRemarks());
         return ApiResponse.success("Event rejected", EventResponseDTO.from(event));
     }

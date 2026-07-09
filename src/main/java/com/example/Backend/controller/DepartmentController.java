@@ -6,10 +6,10 @@ import com.example.Backend.dto.department.DepartmentResponseDTO;
 import com.example.Backend.model.Department;
 import com.example.Backend.service.DepartmentService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Master data for departments. Read access is open to any authenticated
@@ -53,9 +53,12 @@ public class DepartmentController {
     }
 
     @GetMapping
-    public ApiResponse<List<DepartmentResponseDTO>> list() {
-        List<DepartmentResponseDTO> response = departmentService.findAll().stream()
-                .map(DepartmentResponseDTO::from).toList();
+    public ApiResponse<Page<DepartmentResponseDTO>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<DepartmentResponseDTO> response = departmentService.findAll(PageRequest.of(page, size))
+                .map(DepartmentResponseDTO::from);
         return ApiResponse.success(response);
     }
 }

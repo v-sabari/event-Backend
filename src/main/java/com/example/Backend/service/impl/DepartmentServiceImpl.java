@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class DepartmentServiceImpl implements DepartmentService {
@@ -27,8 +28,8 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final AuditLogService auditLogService;
 
     public DepartmentServiceImpl(DepartmentRepository departmentRepository,
-                                  UserRepository userRepository,
-                                  AuditLogService auditLogService) {
+                                 UserRepository userRepository,
+                                 AuditLogService auditLogService) {
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
@@ -114,7 +115,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     }
 
     @Override
-    public List<Department> findAll() {
-        return departmentRepository.findAll();
+    public Page<Department> findAll(Pageable pageable) {
+        return departmentRepository.findAll(pageable);
     }
 }

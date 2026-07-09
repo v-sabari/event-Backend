@@ -6,10 +6,10 @@ import com.example.Backend.dto.common.ApiResponse;
 import com.example.Backend.model.Club;
 import com.example.Backend.service.ClubService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Clubs can be managed by SUPER_ADMIN and FACULTY_COORDINATOR (a faculty
@@ -60,8 +60,11 @@ public class ClubController {
     }
 
     @GetMapping
-    public ApiResponse<List<ClubResponseDTO>> list() {
-        List<ClubResponseDTO> response = clubService.findAll().stream().map(ClubResponseDTO::from).toList();
+    public ApiResponse<Page<ClubResponseDTO>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<ClubResponseDTO> response = clubService.findAll(PageRequest.of(page, size)).map(ClubResponseDTO::from);
         return ApiResponse.success(response);
     }
 }

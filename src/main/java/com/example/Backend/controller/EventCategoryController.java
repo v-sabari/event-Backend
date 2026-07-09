@@ -6,10 +6,10 @@ import com.example.Backend.dto.common.ApiResponse;
 import com.example.Backend.model.EventCategory;
 import com.example.Backend.service.EventCategoryService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Master data used to categorize events (e.g. "Technical", "Cultural",
@@ -53,9 +53,12 @@ public class EventCategoryController {
     }
 
     @GetMapping
-    public ApiResponse<List<EventCategoryResponseDTO>> list() {
-        List<EventCategoryResponseDTO> response = categoryService.findAll().stream()
-                .map(EventCategoryResponseDTO::from).toList();
+    public ApiResponse<Page<EventCategoryResponseDTO>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<EventCategoryResponseDTO> response = categoryService.findAll(PageRequest.of(page, size))
+                .map(EventCategoryResponseDTO::from);
         return ApiResponse.success(response);
     }
 }

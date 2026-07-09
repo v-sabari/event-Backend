@@ -7,11 +7,11 @@ import com.example.Backend.model.Role;
 import com.example.Backend.model.User;
 import com.example.Backend.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Owns /api/users/**: the authenticated user's own profile, plus
@@ -42,9 +42,15 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'FACULTY_COORDINATOR')")
-    public ApiResponse<List<UserResponseDTO>> list(@RequestParam(required = false) Role role) {
-        List<User> users = role != null ? userService.findByRole(role) : userService.findAll();
-        List<UserResponseDTO> response = users.stream().map(UserResponseDTO::from).toList();
+    public ApiResponse<Page<UserResponseDTO>> list(
+            @RequestParam(required = false) Role role,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<User> users = role != null
+                ? userService.findByRole(role, PageRequest.of(page, size))
+                : userService.findAll(PageRequest.of(page, size));
+        Page<UserResponseDTO> response = users.map(UserResponseDTO::from);
         return ApiResponse.success(response);
     }
 

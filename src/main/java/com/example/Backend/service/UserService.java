@@ -13,7 +13,7 @@ import org.springframework.data.domain.Pageable;
  */
 public interface UserService {
 
-    User register(RegisterRequestDTO dto);
+    User register(RegisterRequestDTO dto, User actor);
 
     User findByRegNumber(String regNumber);
 

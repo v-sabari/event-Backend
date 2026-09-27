@@ -98,6 +98,12 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public Event findByIdForUpdate(Long id) {
+        return eventRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+    }
+
+    @Override
     public Page<Event> findVisibleTo(User currentUser, Pageable pageable) {
         return switch (currentUser.getRole()) {
             case SUPER_ADMIN -> eventRepository.findAll(pageable);

@@ -9,6 +9,7 @@ import com.example.Backend.model.User;
 import com.example.Backend.repository.RefreshTokenRepository;
 import com.example.Backend.repository.UserRepository;
 import com.example.Backend.security.JwtService;
+import com.example.Backend.security.RefreshTokenHasher;
 import com.example.Backend.service.AuditLogService;
 import com.example.Backend.service.AuthService;
 import com.example.Backend.service.LoginAttemptService;
@@ -93,11 +94,20 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponseDTO refresh(String rawRefreshToken) {
-        RefreshToken stored = refreshTokenRepository.findByToken(rawRefreshToken)
+        RefreshToken stored = refreshTokenRepository.findByToken(RefreshTokenHasher.hash(rawRefreshToken))
                 .orElseThrow(() -> new InvalidTokenException("Refresh token not recognized"));
 
-        if (stored.isRevoked() || stored.getExpiresAt().isBefore(Instant.now())) {
-            throw new InvalidTokenException("Refresh token expired or revoked, please log in again");
+        // A revoked token here means the value was presented before - i.e. a
+        // rotated token is being replayed. Treat that as suspected theft and
+        // revoke every other live token for the account (family revocation).
+        if (stored.isRevoked()) {
+            log.warn("Refresh token reuse detected for user {}", stored.getUser().getRegNumber());
+            refreshTokenRepository.revokeAllByUser(stored.getUser());
+            throw new InvalidTokenException("Refresh token already used, please log in again");
+        }
+
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
+            throw new InvalidTokenException("Refresh token expired, please log in again");
         }
 
         if (!jwtService.isTokenParsable(rawRefreshToken)) {
@@ -117,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void logout(String rawRefreshToken) {
-        refreshTokenRepository.findByToken(rawRefreshToken).ifPresent(token -> {
+        refreshTokenRepository.findByToken(RefreshTokenHasher.hash(rawRefreshToken)).ifPresent(token -> {
             token.setRevoked(true);
             refreshTokenRepository.save(token);
             auditLogService.record("LOGOUT", "User", token.getUser().getId(), "User logged out");
@@ -129,7 +139,8 @@ public class AuthServiceImpl implements AuthService {
         String refreshTokenValue = jwtService.generateRefreshToken(user);
 
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(refreshTokenValue);
+        // Only the SHA-256 digest of the token is stored, never the token itself.
+        refreshToken.setToken(RefreshTokenHasher.hash(refreshTokenValue));
         refreshToken.setUser(user);
         refreshToken.setExpiresAt(Instant.now().plusMillis(jwtService.getRefreshTokenExpirationMs()));
         refreshTokenRepository.save(refreshToken);

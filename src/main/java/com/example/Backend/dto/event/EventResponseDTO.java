@@ -35,17 +35,21 @@ public class EventResponseDTO {
         dto.id = e.getId();
         dto.title = e.getTitle();
         dto.description = e.getDescription();
-        dto.venueId = e.getVenue().getId();
-        dto.venueName = e.getVenue().getName();
+        if (e.getVenue() != null) {
+            dto.venueId = e.getVenue().getId();
+            dto.venueName = e.getVenue().getName();
+        }
         dto.startTime = e.getStartTime();
         dto.endTime = e.getEndTime();
         dto.registrationDeadline = e.getRegistrationDeadline();
         dto.maxParticipants = e.getMaxParticipants();
         dto.fee = e.getFee();
         dto.bannerUrl = e.getBannerUrl();
-        dto.status = e.getStatus().name();
-        dto.createdById = e.getCreatedBy().getId();
-        dto.createdByName = e.getCreatedBy().getName();
+        dto.status = e.getStatus() != null ? e.getStatus().name() : null;
+        if (e.getCreatedBy() != null) {
+            dto.createdById = e.getCreatedBy().getId();
+            dto.createdByName = e.getCreatedBy().getName();
+        }
         dto.createdAt = e.getCreatedAt();
         dto.updatedAt = e.getUpdatedAt();
         if (e.getCategory() != null) {

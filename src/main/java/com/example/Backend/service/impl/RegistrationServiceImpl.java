@@ -46,7 +46,12 @@ public class RegistrationServiceImpl implements RegistrationService {
     @Override
     @Transactional
     public Registration register(Long eventId, User student) {
-        Event event = eventService.findById(eventId);
+        // Write-lock the event row for the whole transaction (SELECT FOR
+        // UPDATE): the REGISTERED vs WAITLISTED decision is check-then-insert,
+        // so concurrent registrations must serialize on the event or two
+        // requests could both read count == maxParticipants - 1 and both
+        // commit as REGISTERED, oversubscribing capacity.
+        Event event = eventService.findByIdForUpdate(eventId);
 
         if (event.getStatus() != EventStatus.PUBLISHED) {
             throw new ApiException("Registrations are only open for published events", HttpStatus.CONFLICT);
@@ -102,6 +107,11 @@ public class RegistrationServiceImpl implements RegistrationService {
             throw new ApiException("Registration is already cancelled", HttpStatus.CONFLICT);
         }
 
+        // Serialize on the event row (same lock as register()) so a cancel
+        // that frees a seat and a concurrent register re-counting capacity
+        // cannot interleave into an inconsistent REGISTERED total.
+        Event event = eventService.findByIdForUpdate(registration.getEvent().getId());
+
         boolean wasConfirmedSeat = registration.getStatus() == RegistrationStatus.REGISTERED;
         registration.setStatus(RegistrationStatus.CANCELLED);
         registrationRepository.save(registration);
@@ -110,7 +120,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         auditLogService.record("REGISTRATION_CANCELLED", "Registration", registrationId, "Cancelled by " + currentUser.getRegNumber());
 
         if (wasConfirmedSeat) {
-            promoteNextWaitlisted(registration.getEvent());
+            promoteNextWaitlisted(event);
         }
     }
 

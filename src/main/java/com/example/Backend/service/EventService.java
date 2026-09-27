@@ -16,6 +16,13 @@ public interface EventService {
 
     Event findById(Long id);
 
+    /**
+     * Loads the event row holding a pessimistic write lock (SELECT ... FOR
+     * UPDATE) so capacity-sensitive flows like registration serialize per
+     * event. Must be called inside a transaction.
+     */
+    Event findByIdForUpdate(Long id);
+
     // BE-17: EventController.myVisibleEvents() returned every visible event
     // unbounded - for SUPER_ADMIN in particular this was eventRepository.findAll()
     // with no limit at all. The unpaged findVisibleTo(User) below had no other

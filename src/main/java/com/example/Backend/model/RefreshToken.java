@@ -9,6 +9,9 @@ import java.time.Instant;
  * Refresh tokens are persisted (not just signed-and-trusted) so they can be
  * revoked individually - e.g. on logout or password reset - without needing
  * to wait out the JWT's own expiry.
+ *
+ * The {@code token} column stores only a SHA-256 digest of the refresh-token
+ * JWT (see security.RefreshTokenHasher), never the raw token itself.
  */
 @Entity
 @Table(name = "refresh_tokens")

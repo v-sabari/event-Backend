@@ -1,6 +1,7 @@
 package com.example.Backend.service.impl;
 
 import com.example.Backend.dto.auth.RegisterRequestDTO;
+import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.exception.DuplicateResourceException;
 import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.model.Department;
@@ -18,10 +19,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Service
 public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    /**
+     * Roles a FACULTY_COORDINATOR is allowed to provision. Everything else
+     * (FACULTY_COORDINATOR, HOD, SUPER_ADMIN) is reserved for SUPER_ADMIN -
+     * otherwise a coordinator could hand out admin/faculty power to anyone,
+     * i.e. privilege escalation via the POST /api/users endpoint.
+     */
+    private static final Set<Role> ROLES_COORDINATOR_MAY_GRANT =
+            Set.of(Role.STUDENT, Role.STUDENT_ORGANIZER);
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
@@ -40,7 +52,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User register(RegisterRequestDTO dto) {
+    public User register(RegisterRequestDTO dto, User actor) {
         if (userRepository.existsByRegNumber(dto.getRegNumber())) {
             throw new DuplicateResourceException("A user with reg number '" + dto.getRegNumber() + "' already exists");
         }
@@ -53,6 +65,14 @@ public class UserServiceImpl implements UserService {
             role = Role.valueOf(dto.getRole().trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid role: " + dto.getRole());
+        }
+
+        // Privilege-escalation guard: only SUPER_ADMIN may provision accounts
+        // with admin/faculty power. A FACULTY_COORDINATOR can only create
+        // student accounts - never other coordinators, HODs or admins.
+        if (actor.getRole() != Role.SUPER_ADMIN && !ROLES_COORDINATOR_MAY_GRANT.contains(role)) {
+            throw new AccessDeniedCustomException(
+                    "Only SUPER_ADMIN can create an account with the role " + role);
         }
 
         User user = new User();

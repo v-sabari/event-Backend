@@ -1,6 +1,7 @@
 package com.example.Backend.service.impl;
 
 import com.example.Backend.dto.auth.RegisterRequestDTO;
+import com.example.Backend.exception.AccessDeniedCustomException;
 import com.example.Backend.exception.DuplicateResourceException;
 import com.example.Backend.exception.ResourceNotFoundException;
 import com.example.Backend.model.Department;
@@ -50,6 +51,24 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
+    private User admin() {
+        User admin = new User();
+        admin.setId(1L);
+        admin.setRegNumber("admin001");
+        admin.setName("Root Admin");
+        admin.setRole(Role.SUPER_ADMIN);
+        return admin;
+    }
+
+    private User coordinator() {
+        User coordinator = new User();
+        coordinator.setId(2L);
+        coordinator.setRegNumber("coord001");
+        coordinator.setName("Faculty Coordinator");
+        coordinator.setRole(Role.FACULTY_COORDINATOR);
+        return coordinator;
+    }
+
     private RegisterRequestDTO validDto(String regNumber, String email, String role, Long departmentId) {
         RegisterRequestDTO dto = new RegisterRequestDTO();
         dto.setRegNumber(regNumber);
@@ -66,7 +85,7 @@ class UserServiceImplTest {
         RegisterRequestDTO dto = validDto("2023CS001", "jane@example.com", "STUDENT", null);
         when(userRepository.existsByRegNumber("2023CS001")).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.register(dto))
+        assertThatThrownBy(() -> userService.register(dto, admin()))
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(userRepository, never()).save(any());
@@ -79,7 +98,7 @@ class UserServiceImplTest {
         when(userRepository.existsByRegNumber("2023CS002")).thenReturn(false);
         when(userRepository.existsByEmail("dup@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.register(dto))
+        assertThatThrownBy(() -> userService.register(dto, admin()))
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(userRepository, never()).save(any());
@@ -91,7 +110,7 @@ class UserServiceImplTest {
         when(userRepository.existsByRegNumber("2023CS003")).thenReturn(false);
         when(userRepository.existsByEmail("bad@example.com")).thenReturn(false);
 
-        assertThatThrownBy(() -> userService.register(dto))
+        assertThatThrownBy(() -> userService.register(dto, admin()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid role");
 
@@ -111,7 +130,7 @@ class UserServiceImplTest {
             return saved;
         });
 
-        User result = userService.register(dto);
+        User result = userService.register(dto, admin());
 
         assertThat(result.getId()).isEqualTo(99L);
         assertThat(result.getRole()).isEqualTo(Role.STUDENT);
@@ -136,7 +155,7 @@ class UserServiceImplTest {
             return saved;
         });
 
-        User result = userService.register(dto);
+        User result = userService.register(dto, admin());
 
         assertThat(result.getDepartment()).isNull();
         verify(departmentRepository, never()).findById(anyLong());
@@ -149,10 +168,84 @@ class UserServiceImplTest {
         when(userRepository.existsByEmail("dept@example.com")).thenReturn(false);
         when(departmentRepository.findById(77L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.register(dto))
+        assertThatThrownBy(() -> userService.register(dto, admin()))
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void coordinatorCannotGrantSuperAdmin() {
+        RegisterRequestDTO dto = validDto("2023CS007", "esc1@example.com", "SUPER_ADMIN", null);
+        when(userRepository.existsByRegNumber("2023CS007")).thenReturn(false);
+        when(userRepository.existsByEmail("esc1@example.com")).thenReturn(false);
+
+        assertThatThrownBy(() -> userService.register(dto, coordinator()))
+                .isInstanceOf(AccessDeniedCustomException.class)
+                .hasMessageContaining("SUPER_ADMIN");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void coordinatorCannotGrantHod() {
+        RegisterRequestDTO dto = validDto("2023CS008", "esc2@example.com", "HOD", null);
+        when(userRepository.existsByRegNumber("2023CS008")).thenReturn(false);
+        when(userRepository.existsByEmail("esc2@example.com")).thenReturn(false);
+
+        assertThatThrownBy(() -> userService.register(dto, coordinator()))
+                .isInstanceOf(AccessDeniedCustomException.class)
+                .hasMessageContaining("HOD");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void coordinatorCannotGrantAnotherCoordinator() {
+        RegisterRequestDTO dto = validDto("2023CS009", "esc3@example.com", "FACULTY_COORDINATOR", null);
+        when(userRepository.existsByRegNumber("2023CS009")).thenReturn(false);
+        when(userRepository.existsByEmail("esc3@example.com")).thenReturn(false);
+
+        assertThatThrownBy(() -> userService.register(dto, coordinator()))
+                .isInstanceOf(AccessDeniedCustomException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void coordinatorMayGrantStudentRoles() {
+        RegisterRequestDTO dto = validDto("2023CS010", "ok1@example.com", "STUDENT_ORGANIZER", null);
+        when(userRepository.existsByRegNumber("2023CS010")).thenReturn(false);
+        when(userRepository.existsByEmail("ok1@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(101L);
+            return saved;
+        });
+
+        User result = userService.register(dto, coordinator());
+
+        assertThat(result.getRole()).isEqualTo(Role.STUDENT_ORGANIZER);
+        verify(auditLogService).record(eq("USER_REGISTERED"), eq("User"), eq(101L), anyString());
+    }
+
+    @Test
+    void superAdminMayGrantHod() {
+        RegisterRequestDTO dto = validDto("2023CS011", "ok2@example.com", "HOD", null);
+        when(userRepository.existsByRegNumber("2023CS011")).thenReturn(false);
+        when(userRepository.existsByEmail("ok2@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(102L);
+            return saved;
+        });
+
+        User result = userService.register(dto, admin());
+
+        assertThat(result.getRole()).isEqualTo(Role.HOD);
+        verify(auditLogService).record(eq("USER_REGISTERED"), eq("User"), eq(102L), anyString());
     }
 
     @Test

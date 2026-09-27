@@ -35,8 +35,9 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'FACULTY_COORDINATOR')")
-    public ApiResponse<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO dto) {
-        User created = userService.register(dto);
+    public ApiResponse<UserResponseDTO> register(@AuthenticationPrincipal User currentUser,
+                                                 @Valid @RequestBody RegisterRequestDTO dto) {
+        User created = userService.register(dto, currentUser);
         return ApiResponse.success("User created", UserResponseDTO.from(created));
     }
 

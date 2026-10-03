@@ -22,7 +22,7 @@ We'll acknowledge your report as soon as possible and work with you on a fix and
 ## Notes for This Project
 
 - **`JWT_SECRET` must always be set explicitly.** The application intentionally fails to start if it's missing — there is no baked-in fallback secret, to prevent token forgery in a misconfigured deployment.
-- **Change the seeded Super Admin password immediately** (`SA001` / `ChangeMe123`, created by `V9__seed_super_admin.sql`) in any shared or deployed environment, via the forgot-password/OTP flow.
+- **The seeded Super Admin password (`SA001`, created by `V9__seed_super_admin.sql`) is rotated by `V21` and is never published.** Get the current value out-of-band from the system owner, and change it via forgot-password/OTP in any shared or deployed environment as soon as real SMTP is configured.
 - Login attempts are rate-limited per-account and per-IP (`LoginAttemptServiceImpl`) to mitigate credential stuffing, since `/api/auth/login` is intentionally public.
 - File uploads are validated against a content-type allow-list and checked for path traversal (`FileStorageServiceImpl`) before being written to `FILE_UPLOAD_DIR`.
 - Deploy behind HTTPS in any real environment — JWTs and passwords must never travel over plain HTTP.

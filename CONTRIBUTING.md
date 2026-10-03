@@ -22,7 +22,7 @@ Thanks for your interest in contributing! This document covers everything you ne
    ./mvnw spring-boot:run
    ```
 
-Flyway will apply all migrations and seed a bootstrap Super Admin (`SA001` / `ChangeMe123`) on first run against an empty database.
+Flyway will apply all migrations and seed a bootstrap Super Admin (`SA001`) on first run against an empty database; its password is rotated by `V21` and provided out-of-band — never published.
 
 ## Branching
 

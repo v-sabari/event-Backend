@@ -22,7 +22,7 @@ Create `event-main/.env` with `VITE_API_URL=http://localhost:8080` (or your depl
 
 ## 4. Deployment Guide (summary)
 1. Provision PostgreSQL; create an empty `campusconnect` database.
-2. Set backend env vars above; run `mvn clean package`; run the jar — Flyway applies V1–V19 automatically, seeding one bootstrap `SUPER_ADMIN` (`SA001` / `ChangeMe123` — **change immediately** via forgot-password/OTP).
+2. Set backend env vars above; run `mvn clean package`; run the jar — Flyway applies V1–V21 automatically, seeding one bootstrap `SUPER_ADMIN` (`SA001`; its password is rotated by `V21` and no longer published — **change it immediately** via forgot-password/OTP once you have the out-of-band value).
 3. Set `FILE_UPLOAD_DIR` to a persistent volume/disk in production (uploaded files, certificates, and gallery images are **not** stored in the database).
 4. Set real SMTP credentials so OTP/notification emails actually deliver.
 5. Set `CORS_ALLOWED_ORIGINS` to your real frontend domain(s).

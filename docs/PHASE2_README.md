@@ -18,13 +18,7 @@
 Without real SMTP credentials, `POST /api/auth/forgot-password` will still generate and store an OTP (so `verify-otp`/`reset-password` work), it just won't successfully deliver the email — this is logged, not thrown, so the endpoint still responds normally.
 
 ## Bootstrap login (seeded by V9__seed_super_admin.sql)
-There is intentionally no public self-signup endpoint (account creation is admin/faculty-coordinator driven via `POST /api/users`). A seed migration creates one starting account so you can log in at all on a fresh database:
-
-```
-regNumber: SA001
-password:  ChangeMe123
-role:      SUPER_ADMIN
-```
+There is intentionally no public self-signup endpoint (account creation is admin/faculty-coordinator driven via `POST /api/users`). A seed migration creates one starting account (registration number `SA001`, role `SUPER_ADMIN`) so you can log in on a fresh database. The default password is rotated by migration `V21`; **it is no longer published** — get the current value from the system owner/secret manager.
 
 **Change this password immediately** in any environment beyond your own machine, via the forgot-password/OTP flow.
 

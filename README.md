@@ -133,17 +133,11 @@ Schema is fully owned by Flyway (`src/main/resources/db/migration/V1__...` throu
 
 `Role` is a fixed 5-value Java enum, not a database table, since the role set is small and referenced directly in security rules.
 
-## Demo / Seed Credentials
+## Bootstrap Admin Account
 
-A Flyway seed migration (`V9__seed_super_admin.sql`) creates one bootstrap account on a fresh database so you can log in immediately:
+A Flyway seed migration (`V9__seed_super_admin.sql`) creates one bootstrap `SUPER_ADMIN` account (registration number `SA001`) on a fresh database. Its default password is **no longer documented or predictable**: migration `V21` rotates it to a freshly generated strong password, and the current value is delivered to the system owner out-of-band (not stored in this repository).
 
-| Field | Value |
-|---|---|
-| Registration number | `SA001` |
-| Password | `ChangeMe123` |
-| Role | `SUPER_ADMIN` |
-
-> ⚠️ **Change this password immediately** in any shared or deployed environment, via the forgot-password/OTP flow. There is intentionally no public self-signup endpoint — all other accounts are created by an admin or faculty coordinator via `POST /api/users`.
+> ⚠️ Do **not** run a fresh deployment and hand out the bootstrap credentials from this repo — they are transient. Rotate the `SA001` password via the forgot-password/OTP flow immediately after the first login (requires real SMTP + a controlled admin inbox), and remember there is intentionally no public self-signup endpoint — all other accounts are created by an admin or faculty coordinator via `POST /api/users`.
 
 ## API Documentation
 

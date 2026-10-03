@@ -101,10 +101,10 @@ The API will be available at `http://localhost:8080`. Health check: `GET /api/he
 | `DB_USERNAME` | Postgres username | *(required)* |
 | `DB_PASSWORD` | Postgres password | *(required)* |
 | `JWT_SECRET` | Base64-encoded HMAC signing key for JWTs | *(required — app fails to start if unset)* |
-| `MAIL_HOST` | SMTP host | `smtp.gmail.com` |
+| `MAIL_HOST` | SMTP host (transactional relay) | `smtp-relay.brevo.com` |
 | `MAIL_PORT` | SMTP port | `587` |
-| `MAIL_USERNAME` | SMTP username | *(empty)* |
-| `MAIL_PASSWORD` | SMTP password / app password | *(empty)* |
+| `MAIL_USERNAME` | SMTP username (e.g. Brevo SMTP login) | *(empty)* |
+| `MAIL_PASSWORD` | SMTP password (e.g. Brevo SMTP key) | *(empty)* |
 | `MAIL_FROM` | From-address for OTP/notification emails | `noreply@campusconnect.edu` |
 | `FILE_UPLOAD_DIR` | Local folder for uploads/certificates/gallery | `uploads` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allow-list for frontend origin(s) | `http://localhost:5173` |
@@ -116,6 +116,8 @@ openssl rand -base64 64
 ```
 
 > ⚠️ Without real SMTP credentials, OTP emails won't actually deliver, but `forgot-password` / `verify-otp` / `reset-password` still work end-to-end (the OTP is generated and stored regardless — delivery failure is logged, not thrown).
+>
+> **Setting up transactional email (official, ~10 minutes):** ☑ Register a free account at [brevo.com](https://www.brevo.com) (plan *Free*, 300 emails/day). ☑ In **SMTP & API → SMTP**, reveal your SMTP login + master password. ☑ On Render, set `MAIL_USERNAME` and `MAIL_PASSWORD` to those two values (`MAIL_HOST`/`MAIL_PORT`/`MAIL_FROM` defaults already work). ☑ Redeploy + verify a reset OTP arrives. Gmail is deliberately not used here.
 
 ## Database & Migrations
 

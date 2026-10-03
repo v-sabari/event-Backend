@@ -10,7 +10,7 @@
 |---|---|---|
 | `DB_PASSWORD` | Postgres password | `yourpassword` |
 | `JWT_SECRET` | Base64-encoded HMAC signing key for JWTs | dev-only default baked in — **override in any shared/deployed environment** |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials for OTP emails | Gmail SMTP host/port, empty credentials |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials for OTP emails (transactional relay, e.g. Brevo `smtp-relay.brevo.com:587`) | Brevo relay, empty credentials |
 | `MAIL_FROM` | From-address for OTP emails | `noreply@campusconnect.edu` |
 | `FILE_UPLOAD_DIR` | Local folder for uploaded files | `uploads` (relative to working dir) |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allow-list for the frontend origin(s) | `http://localhost:5173` |
